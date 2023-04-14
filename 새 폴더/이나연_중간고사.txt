@@ -1,0 +1,66 @@
+--문제1
+SELECT TO_CHAR(OUTBOUND_DATE, 'YYYY-MM') AS OUT_DATE
+      ,COUNT(DISTINCT INVOICE_NO)        AS INV_CNT
+      ,SUM(SET_QTY)                      AS SET_QTY
+  FROM LO_OUT_M
+ WHERE OUTBOUND_DATE BETWEEN '20190601' AND '20190831'
+ GROUP BY TO_CHAR(OUTBOUND_DATE, 'YYYY-MM')
+ ORDER BY OUT_DATE;
+
+--------------------------------------------------------------------------------
+--문제2
+
+SELECT --+ ORDERED USE_NL(D) INDEX(D LO_OUT_D_IDXPK)
+       M.OUT_TYPE_DIV
+      ,SUM(ORDER_QTY) AS SUM_QTY
+  FROM LO_OUT_M M
+       JOIN LO_OUT_D D ON D.INVOICE_NO = M.INVOICE_NO 
+ WHERE OUTBOUND_DATE = '20190903'
+ GROUP BY M.OUT_TYPE_DIV
+ HAVING SUM(ORDER_QTY) >= 5000
+ ORDER BY CASE WHEN OUT_TYPE_DIV LIKE 'M1%' THEN SUM_QTY END ASC,
+          CASE WHEN OUT_TYPE_DIV LIKE 'M2%' THEN SUM_QTY END DESC;
+
+
+--------------------------------------------------------------------------------
+--문제3
+
+SELECT CASE WHEN ROWNUM <= 10 THEN TO_CHAR(OUTBOUND_DATE, 'YYYY-MM-DD') ELSE 'ETC' END AS OUT_DATE
+      ,CASE WHEN ROWNUM <= 10 THEN ITEM_CD  ELSE ' '   END AS ITE_CD
+      ,CASE WHEN ROWNUM <= 10 THEN ITEM_NM  ELSE ' '   END AS ITEM_NM
+      ,SUM(SUM_QTY)                                        AS SUM_QTY
+ FROM (
+        SELECT --+ ORDERED USE_NL(D) INDEX(D LO_OUT_D_IDXPK)
+               M.OUTBOUND_DATE
+              ,D.ITEM_CD
+              ,D.ITEM_NM
+              ,SUM(ORDER_QTY)  AS SUM_QTY
+          FROM LO_OUT_M M
+               JOIN LO_OUT_D D ON D.INVOICE_NO = M.INVOICE_NO
+                              AND D.ITEM_NM    LIKE '%참치%'
+         WHERE OUTBOUND_DATE BETWEEN '20190601' AND '20190630'
+         GROUP BY M.OUTBOUND_DATE
+                 ,D.ITEM_CD      
+                 ,D.ITEM_NM
+         ORDER BY SUM_QTY DESC
+        )
+ GROUP BY CASE WHEN ROWNUM <= 10 THEN TO_CHAR(OUTBOUND_DATE, 'YYYY-MM-DD') ELSE 'ETC' END
+         ,CASE WHEN ROWNUM <= 10 THEN ITEM_CD  ELSE ' '   END
+         ,CASE WHEN ROWNUM <= 10 THEN ITEM_NM  ELSE ' '   END
+ ORDER BY CASE WHEN OUT_DATE != 'ETC' THEN 1 ELSE 2 END 
+         ,SUM_QTY DESC;       
+
+--------------------------------------------------------------------------------
+--문제4
+SELECT A || '단' AS DANSU
+      ,A || 'x' || B || '=' || A*B AS CONTENTS
+  FROM (
+        SELECT 1 + NO AS A
+          FROM CS_NO
+         WHERE NO <= 8
+       ) 
+       , (
+          SELECT 1 + NO -1 AS B
+            FROM CS_NO
+           WHERE NO <= 9
+           );
